@@ -103,7 +103,7 @@ async function main() {
 
     // console.log("RESPONSE", RESPONSE_HTML);
     console.log("Writing index.html");
-    fs.writeFileSync("index.html", RESPONSE_HTML);
+    fs.writeFileSync("public/index.html", RESPONSE_HTML);
 
   } catch(err){
     console.error("ERROR", err);
