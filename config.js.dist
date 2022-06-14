@@ -1,0 +1,14 @@
+const config = {};
+
+config.matrix_api_url = 'https://matrix.org/_matrix/client/r0';
+
+// Put your api token here, so it wont be created on every api call
+config.matrix_api_token = "";
+
+// If the room_id changes, then the hash-room name can be used instead,
+// but it will make one more api call per script run:
+//   config.matrix_room_name = '#codeformuenster-events:matrix.org';
+config.matrix_room_name = '!tuOLfhLLphPDUwtDmC:matrix.org';
+
+// Pass config values to main program
+module.exports = config;

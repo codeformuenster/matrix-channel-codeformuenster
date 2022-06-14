@@ -1,0 +1,19 @@
+{
+  "name": "matrix-codeformuenster",
+  "version": "0.0.3",
+  "description": "Read latest messages from codeformuenster matrix channel",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run": "node index.js"
+  },
+  "keywords": [
+    "matrix",
+    "codeformuenster"
+  ],
+  "author": "TW",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2"
+  }
+}
