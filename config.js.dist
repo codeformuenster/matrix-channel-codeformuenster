@@ -10,5 +10,7 @@ config.matrix_api_token = "";
 //   config.matrix_room_name = '#codeformuenster-events:matrix.org';
 config.matrix_room_name = '!tuOLfhLLphPDUwtDmC:matrix.org';
 
+config.generate_matrix_avatar_url = (avatar_url) => `https://matrix.muensterhack.de/_matrix/media/v1/thumbnail/${avatar_url}?width=40&height=40`;
+
 // Pass config values to main program
 module.exports = config;
