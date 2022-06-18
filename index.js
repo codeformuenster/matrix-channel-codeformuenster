@@ -19,6 +19,29 @@ async function getMatrixApiToken() {
   return data.access_token;
 }
 
+// Transform matrix username string to a color (Fallback for ppl without avatar)
+// ref. https://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
+// and https://stackoverflow.com/questions/11120840/hash-string-into-rgb-color
+function djb2(str){
+  var hash = 5381;
+  for (var i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i); /* hash * 33 + c */
+  }
+  return hash;
+}
+function hashStringToColor(str) {
+  var hash = djb2(str);
+  var r = (hash & 0xFF0000) >> 16;
+  var g = (hash & 0x00FF00) >> 8;
+  var b = hash & 0x0000FF;
+  // shade the color to black by 60%
+  return RGB_Log_Shade(-0.6, `rgb(${r},${g},${b})`);
+}
+const RGB_Log_Shade=(p,c)=>{
+  var i=parseInt,r=Math.round,[a,b,c,d]=c.split(","),P=p<0,t=P?0:p*255**2,P=P?1+p:1-p;
+  return"rgb"+(d?"a(":"(")+r((P*i(a[3]=="a"?a.slice(5):a.slice(4))**2+t)**0.5)+","+r((P*i(b)**2+t)**0.5)+","+r((P*i(c)**2+t)**0.5)+(d?","+d:")");
+}
+
 async function getRoomId(roomName) {
   // we know that if the first character is a '#', we have an alias not an id
   if (roomName[0] === "#") {
@@ -31,19 +54,41 @@ async function getRoomId(roomName) {
   }
   return roomName;
 }
-
-async function loadScriptFromEventId(roomId, accessToken) {
+async function getRoomMessages(roomId, accessToken) {
   const url = MATRIX_API_SERVER + `/rooms/${encodeURIComponent(roomId)}/messages?dir=b&limit=10&access_token=${accessToken}`;
   const res = await axios.get(url);
   const { data } = await res;
-  // console.log("startId response", data)
+  // console.log("messages response", data);
   return data.chunk
+}
+
+async function getAvatarUrl(userId) {
+  const url = MATRIX_API_SERVER + '/profile/' + userId;
+  const res = await axios.get(url);
+  const { data } = await res;
+  // console.log("userInfo response", data)
+  if (!data.avatar_url) {
+    return '';
+  }
+  const avatar_url = config.generate_matrix_avatar_url(data.avatar_url.replace('mxc://', ''));
+  console.log("avatar url", avatar_url);
+  return avatar_url;
 }
 
 function htmlentities(rawStr) {
   return rawStr.replace(/[\u00A0-\u9999<>\&]/g, function(i) {
     return '&#'+i.charCodeAt(0)+';';
   });
+}
+
+async function getAvatarHtml(userId) {
+  const avatarUrl = await getAvatarUrl(userId);
+  if (avatarUrl) {
+    return '<img src="' + avatarUrl + '" />'
+  } else {
+    const color = hashStringToColor(userId);
+    return '<div class="avatar" style="background-color:' + color + '">' + userId.charAt(1).toUpperCase() + '</div>';
+  }
 }
 
 
@@ -59,15 +104,28 @@ async function main() {
     }
 
     const roomId = await getRoomId(roomName);
-    const messages = await loadScriptFromEventId(roomId, token);
+    const messages = await getRoomMessages(roomId, token);
 
-    RESPONSE_HTML = '<html><head><title>CodeforMünster Events Matrix Channel</title>'
-    + '<style>i {background-color:#ccc;}'
-    + '.container div {margin: 1px 5px;background-color: #eee;border-radius: 10px;  }'
-    + 'b, i, span {display: inline-block;padding: 0 5px;border-radius: 5px;}'
-    + '.container {height: 200px;overflow: auto;display: flex;flex-direction: column-reverse;}'
-    + '</style></head><body><div class="container">';
-    messages.forEach((msg) => {
+    RESPONSE_HTML = '<html lang="de"><head><meta charset="utf-8"><title>CodeforMünster Events Matrix Channel</title>'
+    + '<style>'
+    + 'body {	font-family: Tahoma, Verdana, Segoe, sans-serif; font-size: 0.8em;}'
+    + '.msg i {max-width:90px;overflow:hidden;white-space: nowrap; display:inline-block;background-color:#777;color:white;}'
+    + 'body {overflow-y: hidden;margin: 0;}'
+    + '.container div.msg {margin: 1px 5px;background-color: #eee;border-radius: 10px; padding: 0 5px;}'
+    + 'div.msg.last {margin-top:6px}'
+    + 'span.meta {float:left;display:block;border-radius:5px;background-color:#ccc;margin-right:5px}'
+    + 'span.other {float:left;display:block;}'
+    + 'b, i, span {display: inline;padding: 0}'
+    + '.container {height: 100%;overflow: auto;display: flex;flex-direction: column-reverse;}'
+    + '.header {height:20px;background-color:black;color:white;text-align:center}'
+    + '.header a {color:white}'
+    + '.header img {vertical-align:middle;}'
+    + '.avatar, .msg img {width:35px;height:35px;float:left;margin-right:5px;font-size:26px;color:#ddd;text-align:center}'
+    + '</style></head><body>'
+    + '<div class="header"><img height="20" src="matrix-logo.png" /> <a target="_blank" href="https://matrix.to/#/#codeformuenster-events:matrix.org">#codeformuenster-events:matrix.org</a></div>'
+    + '<div class="container"><div class="msg last">.</div>';
+    for (let index = 0; index < messages.length; index++) {
+      msg = messages[index];
       // console.log(msg);
 
       const sender = msg.sender;
@@ -89,7 +147,11 @@ async function main() {
           const month = msgdate.getMonth() + 1;
           const date = msgdate.getDate();
           const msgtime = date + '.' + month + '. ' + msgdate.toISOString().slice(-13,-8);
-          RESPONSE_HTML += '<div class="msg ' + type + '"><span class="meta"><b>' + msgtime + '</b><i>' + sender + '</i></span><span class="content">' + messagebody  + '</span></div>' + "\n";
+          RESPONSE_HTML += '<div class="msg ' + type + '">'
+          + '<span class="meta">'
+          + await getAvatarHtml(msg.user_id)
+          + '<span class="other"><b>' + msgtime + '</b><br /><i>' + sender + '</i></span></span>'
+          + '<span class="content">' + messagebody  + '</span></div>' + "\n";
           console.log("processing message .. ", msg.event_id );
         } else {
           console.log("processing message .. ", msg.event_id, '=> skipping! unknown content.' );
@@ -97,7 +159,7 @@ async function main() {
       } else {
         console.log("processing message .. ", msg.event_id, '=> skipping! no content.' );
       }
-    });
+    }
 
     RESPONSE_HTML += '</div></body></html>';
 
