@@ -56,7 +56,8 @@ async function getRoomId(roomName) {
   return roomName;
 }
 async function getRoomMessages(roomId, accessToken) {
-  const url = MATRIX_API_SERVER + `/rooms/${encodeURIComponent(roomId)}/messages?dir=b&limit=10&access_token=${accessToken}`;
+  const url = MATRIX_API_SERVER + `/rooms/${encodeURIComponent(roomId)}/messages?dir=b&limit=25&access_token=${accessToken}`;
+
   const res = await axios.get(url);
   const { data } = await res;
   // console.log("messages response", data);
@@ -157,7 +158,7 @@ async function main() {
           + '<span class="content">' + messagebody  + '</span></div>' + "\n";
           console.log("processing message .. ", msg.event_id );
         } else {
-          console.log("processing message .. ", msg.event_id, '=> skipping! unknown content.' );
+          console.log("processing message .. ", msg.event_id, '=> skipping! unknown content of type', type );
         }
       } else {
         console.log("processing message .. ", msg.event_id, '=> skipping! no content.' );
