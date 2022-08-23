@@ -2,7 +2,8 @@ const axios = require('axios');
 const fs = require('fs');
 const config = require('./config');
 
-console.log("START .. script time:", new Date().toISOString());
+const date = new Date()
+console.log("START .. script time:", new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString());
 
 const MATRIX_API_SERVER = config.matrix_api_url;
 if (!MATRIX_API_SERVER) {
@@ -143,7 +144,9 @@ async function main() {
         }
 
         if (messagebody) {
-          const msgdate = new Date(msg.origin_server_ts);
+          const utcdate = new Date(msg.origin_server_ts);
+          // convert utc time to local time
+          const msgdate = new Date(utcdate.getTime() - (utcdate.getTimezoneOffset() * 60000))
           const month = msgdate.getMonth() + 1;
           const date = msgdate.getDate();
           const msgtime = date + '.' + month + '. ' + msgdate.toISOString().slice(-13,-8);
