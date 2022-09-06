@@ -95,6 +95,7 @@ async function getAvatarHtml(userId) {
 
 
 async function main() {
+  var messages = []
   try {
     // define the codeformünster-events channel name in the config
     const roomName = config.matrix_room_name;
@@ -106,27 +107,32 @@ async function main() {
     }
 
     const roomId = await getRoomId(roomName);
-    const messages = await getRoomMessages(roomId, token);
+    messages = await getRoomMessages(roomId, token);
+  } catch(err){
+    console.error("ERROR during fetching of messages!!", err);
+  }
 
-    RESPONSE_HTML = '<html lang="de"><head><meta charset="utf-8"><title>CodeforMünster Events Matrix Channel</title>'
-    + '<style>'
-    + 'body {	font-family: Tahoma, Verdana, Segoe, sans-serif; font-size: 0.8em;}'
-    + '.msg i {max-width:90px;overflow:hidden;white-space: nowrap; display:inline-block;background-color:#777;color:white;}'
-    + 'body {overflow-y: hidden;margin: 0;}'
-    + '.container div.msg {margin: 1px 5px;background-color: #eee;border-radius: 10px; padding: 0 5px;}'
-    + 'div.msg.last {margin-top:6px}'
-    + 'span.meta {float:left;display:block;border-radius:5px;background-color:#ccc;margin-right:5px}'
-    + 'span.other {float:left;display:block;}'
-    + 'b, i, span {display: inline;padding: 0}'
-    + '.container {height: 100%;overflow: auto;display: flex;flex-direction: column-reverse;}'
-    + '.header {height:20px;background-color:black;color:white;text-align:center}'
-    + '.header a {color:white}'
-    + '.header img {vertical-align:middle;}'
-    + '.avatar, .msg img {width:35px;height:35px;float:left;margin-right:5px;font-size:26px;color:#ddd;text-align:center}'
-    + '</style></head><body>'
-    + '<div class="header"><img height="20" src="matrix-logo.png" /> <a target="_blank" href="https://matrix.to/#/#codeformuenster-events:matrix.org">#codeformuenster-events:matrix.org</a></div>'
-    + '<div class="container"><div class="msg last">.</div>';
-    for (let index = 0; index < messages.length; index++) {
+  RESPONSE_HTML = '<html lang="de"><head><meta charset="utf-8"><title>CodeforMünster Events Matrix Channel</title>'
+  + '<style>'
+  + 'body {	font-family: Tahoma, Verdana, Segoe, sans-serif; font-size: 0.8em;}'
+  + '.msg i {max-width:90px;overflow:hidden;white-space: nowrap; display:inline-block;background-color:#777;color:white;}'
+  + 'body {overflow-y: hidden;margin: 0;}'
+  + '.container div.msg {margin: 1px 5px;background-color: #eee;border-radius: 10px; padding: 0 5px;}'
+  + 'div.msg.last {margin-top:6px}'
+  + 'span.meta {float:left;display:block;border-radius:5px;background-color:#ccc;margin-right:5px}'
+  + 'span.other {float:left;display:block;}'
+  + 'b, i, span {display: inline;padding: 0}'
+  + '.container {height: 100%;overflow: auto;display: flex;flex-direction: column-reverse;}'
+  + '.header {height:20px;background-color:black;color:white;text-align:center}'
+  + '.header a {color:white}'
+  + '.header img {vertical-align:middle;}'
+  + '.avatar, .msg img {width:35px;height:35px;float:left;margin-right:5px;font-size:26px;color:#ddd;text-align:center}'
+  + '</style></head><body>'
+  + '<div class="header"><img height="20" src="matrix-logo.png" /> <a target="_blank" href="https://matrix.to/#/#codeformuenster-events:matrix.org">#codeformuenster-events:matrix.org</a></div>'
+  + '<div class="container"><div class="msg last">.</div>';
+  for (let index = 0; index < messages.length; index++) {
+    try {
+
       msg = messages[index];
       // console.log(msg);
 
@@ -163,17 +169,19 @@ async function main() {
       } else {
         console.log("processing message .. ", msg.event_id, '=> skipping! no content.' );
       }
+
+    } catch(err){
+      console.error("ERROR", err);
     }
 
-    RESPONSE_HTML += '</div></body></html>';
-
-    // console.log("RESPONSE", RESPONSE_HTML);
-    console.log("Writing index.html");
-    fs.writeFileSync("public/index.html", RESPONSE_HTML);
-
-  } catch(err){
-    console.error("ERROR", err);
   }
+
+  RESPONSE_HTML += '</div></body></html>';
+
+  // console.log("RESPONSE", RESPONSE_HTML);
+  console.log("Writing index.html");
+  fs.writeFileSync("public/index.html", RESPONSE_HTML);
+
 }
 
 main();
