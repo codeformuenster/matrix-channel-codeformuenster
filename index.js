@@ -64,16 +64,22 @@ async function getRoomMessages(roomId, accessToken) {
   return data.chunk
 }
 
+var avatarUrlCache = {};
 async function getAvatarUrl(userId) {
+  if (userId in avatarUrlCache) {
+    return avatarUrlCache[userId];
+  }
   const url = MATRIX_API_SERVER + '/profile/' + userId;
   const res = await axios.get(url);
   const { data } = await res;
   // console.log("userInfo response", data)
   if (!data.avatar_url) {
+    avatarUrlCache[userId] = '';
     return '';
   }
   const avatar_url = config.generate_matrix_avatar_url(data.avatar_url.replace('mxc://', ''));
   console.log("avatar url", avatar_url);
+  avatarUrlCache[userId] = avatar_url;
   return avatar_url;
 }
 
@@ -117,7 +123,8 @@ async function main() {
   + 'body {	font-family: Tahoma, Verdana, Segoe, sans-serif; font-size: 0.8em;}'
   + '.msg i {max-width:90px;overflow:hidden;white-space: nowrap; display:inline-block;background-color:#777;color:white;}'
   + 'body {overflow-y: hidden;margin: 0;}'
-  + '.container div.msg {margin: 1px 5px;background-color: #eee;border-radius: 10px; padding: 0 5px;}'
+  + '.container div.msg, div.separator {margin: 1px 5px;background-color: #eee;border-radius: 10px; padding: 0 5px;}'
+  + 'div.separator {background-color:#f14668;color:white;text-align:center;font-style:italic;letter-spacing: 2px;border-radius:0}'
   + 'div.msg.last {margin-top:6px}'
   + 'span.meta {float:left;display:block;border-radius:5px;background-color:#ccc;margin-right:5px}'
   + 'span.other {float:left;display:block;}'
@@ -130,6 +137,7 @@ async function main() {
   + '</style></head><body>'
   + '<div class="header"><img height="20" src="matrix-logo.png" /> <a target="_blank" href="https://matrix.to/#/#codeformuenster-events:matrix.org">#codeformuenster-events:matrix.org</a></div>'
   + '<div class="container"><div class="msg last">.</div>';
+  var lastdatestring = "";
   for (let index = 0; index < messages.length; index++) {
     try {
 
@@ -156,10 +164,19 @@ async function main() {
           const msgdate = new Date(utcdate.getTime() - (utcdate.getTimezoneOffset() * 60000))
           const month = msgdate.getMonth() + 1;
           const date = msgdate.getDate();
-          const msgtime = date + '.' + month + '. ' + msgdate.toISOString().slice(-13,-8);
+          const dayname = msgdate.toLocaleDateString("de-DE", { weekday: 'long' });
+          const datestring = date + '.' + month + '. ';
+          const msgtime = datestring + msgdate.toISOString().slice(-13,-8);
+          const avatarHtml = await getAvatarHtml(msg.user_id);
+          if (lastdatestring != datestring) {
+            if (lastdatestring) {
+              RESPONSE_HTML += '<div class="separator">' + dayname + ', ' + lastdatestring +'</div>';
+            }
+            lastdatestring = datestring;
+          }
           RESPONSE_HTML += '<div class="msg ' + type + '">'
           + '<span class="meta">'
-          + await getAvatarHtml(msg.user_id)
+          + avatarHtml
           + '<span class="other"><b>' + msgtime + '</b><br /><i>' + sender + '</i></span></span>'
           + '<span class="content">' + messagebody  + '</span></div>' + "\n";
           console.log("processing message .. ", msg.event_id );
