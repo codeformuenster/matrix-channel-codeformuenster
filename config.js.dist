@@ -5,6 +5,11 @@ config.matrix_api_url = 'https://matrix.org/_matrix/client/r0';
 // Put your api token here, so it wont be created on every api call
 config.matrix_api_token = "";
 
+// Optional: enter username and password of a real matrix.org user to use that account for api calls
+// Otherwise an anonymous api token will be generated (which seems to work exactly as good)
+config.matrix_user = ''
+config.matrix_pass = ''
+
 // If the room_id changes, then the hash-room name can be used instead,
 // but it will make one more api call per script run:
 //   config.matrix_room_name = '#codeformuenster-events:matrix.org';

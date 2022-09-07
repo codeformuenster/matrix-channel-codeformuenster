@@ -11,10 +11,21 @@ if (!MATRIX_API_SERVER) {
   process.exit()
 }
 
-
-async function getMatrixApiToken() {
+async function getMatrixApiTokenAnonymous() {
   var url = MATRIX_API_SERVER + "/register?kind=guest";
   const res = await axios.post(url, {});
+  const { data } = await res;
+  console.log("getToken response:", data);
+  return data.access_token;
+}
+
+async function getMatrixTokenForUser() {
+  var url = MATRIX_API_SERVER + "/login";
+  const res = await axios.post(url, {
+    "type":"m.login.password",
+    "user": config.matrix_user,
+    "password": config.matrix_pass
+  });
   const { data } = await res;
   console.log("getToken response:", data);
   return data.access_token;
@@ -69,15 +80,26 @@ async function getAvatarUrl(userId) {
   if (userId in avatarUrlCache) {
     return avatarUrlCache[userId];
   }
-  const url = MATRIX_API_SERVER + '/profile/' + userId;
-  const res = await axios.get(url);
-  const { data } = await res;
-  // console.log("userInfo response", data)
-  if (!data.avatar_url) {
-    avatarUrlCache[userId] = '';
+  avatarUrlCache[userId] = '';
+  var avatar_url = ''
+  try {
+    const url = MATRIX_API_SERVER + '/profile/' + userId;
+    const res = await axios.get(url);
+    const { data } = await res;
+    //console.log("userInfo data response", data)
+    if (data.avatar_url) {
+      avatar_url = data.avatar_url
+    }
+  } catch(err) {
+    if (err.response) {
+      console.error("ERROR during axios call", err.response.config, err.response.data)
+    } else {
+      console.error("ERROR in getAvatarUrl:", err);
+    }
     return '';
   }
-  const avatar_url = config.generate_matrix_avatar_url(data.avatar_url.replace('mxc://', ''));
+  if (!avatar_url) { return '' }
+  avatar_url = config.generate_matrix_avatar_url(avatar_url.replace('mxc://', ''));
   console.log("avatar url", avatar_url);
   avatarUrlCache[userId] = avatar_url;
   return avatar_url;
@@ -106,10 +128,14 @@ async function main() {
     // define the codeformünster-events channel name in the config
     const roomName = config.matrix_room_name;
 
-    // if token is invalid, use the getMatrixApiToken() method to get a new one
+    // if token is invalid, use the best method to get a new one
     var token = config.matrix_api_token;
     if (!token) {
-      token = await getMatrixApiToken();
+      if (config.matrix_user) {
+        token = await getMatrixTokenForUser()
+      } else {
+        token = await getMatrixApiTokenAnonymous();
+      }
     }
 
     const roomId = await getRoomId(roomName);
