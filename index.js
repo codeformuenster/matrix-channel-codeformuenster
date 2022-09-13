@@ -164,6 +164,7 @@ async function main() {
   + '<div class="header"><img height="20" src="matrix-logo.png" /> <a target="_blank" href="https://matrix.to/#/#codeformuenster-events:matrix.org">#codeformuenster-events:matrix.org</a></div>'
   + '<div class="container"><div class="msg last">.</div>';
   var lastdatestring = "";
+  var lastmsgdate = "";
   for (let index = 0; index < messages.length; index++) {
     try {
 
@@ -188,18 +189,20 @@ async function main() {
           const utcdate = new Date(msg.origin_server_ts);
           // convert utc time to local time
           const msgdate = new Date(utcdate.getTime() - (utcdate.getTimezoneOffset() * 60000))
+
           const month = msgdate.getMonth() + 1;
           const date = msgdate.getDate();
-          const dayname = msgdate.toLocaleDateString("de-DE", { weekday: 'long' });
           const datestring = date + '.' + month + '. ';
           const msgtime = datestring + msgdate.toISOString().slice(-13,-8);
-          const avatarHtml = await getAvatarHtml(msg.user_id);
           if (lastdatestring != datestring) {
             if (lastdatestring) {
+              const dayname = lastmsgdate.toLocaleDateString("de-DE", { weekday: 'long' });
               RESPONSE_HTML += '<div class="separator">' + dayname + ', ' + lastdatestring +'</div>';
             }
+            lastmsgdate = msgdate
             lastdatestring = datestring;
           }
+          const avatarHtml = await getAvatarHtml(msg.user_id);
           RESPONSE_HTML += '<div class="msg ' + type + '">'
           + '<span class="meta">'
           + avatarHtml
